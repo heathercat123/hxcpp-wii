@@ -47,7 +47,7 @@ typedef int SocketLen;
 #   include <arpa/inet.h>
 #   include <unistd.h>
 
-#ifdef HX_NX
+#if defined(HX_NX) || defined(HX_WII)
 #define __BSD_VISIBLE 1
 #include <sys/unistd.h>
 #include <sys/select.h>
@@ -68,7 +68,7 @@ typedef int SocketLen;
 typedef socklen_t SocketLen;
 #endif
 
-#if (defined(NEKO_WINDOWS) || defined(HX_NX) || defined(NEKO_MAC)) && !defined(MSG_NOSIGNAL)
+#if (defined(NEKO_WINDOWS) || defined(HX_NX) || defined(NEKO_MAC) || defined(HX_WII)) && !defined(MSG_NOSIGNAL)
 #   define MSG_NOSIGNAL 0
 #endif
 
@@ -407,8 +407,9 @@ int _hx_std_host_resolve( String host )
       char buf[1024];
       int errcode;
       // #if !defined(HX_NX)
+      #if !defined(HX_WII)
       gethostbyname_r(host.utf8_str(&hostBuf),&hbase,buf,1024,&h,&errcode);
-      // #endif
+      #endif
 #   endif
       if( !h ) {
          hx::ExitGCFreeZone();
@@ -427,7 +428,7 @@ inet_pton_func dynamic_inet_pton = 0;
 
 Array<unsigned char> _hx_std_host_resolve_ipv6( String host, bool )
 {
-   #if defined(HX_NX)
+   #if defined(HX_NX)  || defined(HX_WII)
       return Array_obj<unsigned char>::__new();
    #else
       in6_addr ipv6;
@@ -540,13 +541,13 @@ String _hx_std_host_to_string_ipv6( Array<unsigned char> ip )
 **/
 String _hx_std_host_reverse( int host )
 {
-   // #if defined(HX_NX)
+   #if defined(HX_WII)
       return String();
-   // #else
+   #else
       struct hostent *h = 0;
       unsigned int ip = host;
       hx::EnterGCFreeZone();
-      #if defined(NEKO_WINDOWS) || defined(NEKO_MAC) || defined(ANDROID) || defined(BLACKBERRY) || defined(EMSCRIPTEN) || defined(HX_NX)
+      #if defined(NEKO_WINDOWS) || defined(NEKO_MAC) || defined(ANDROID) || defined(BLACKBERRY) || defined(EMSCRIPTEN) || defined(HX_NX) || defined(HX_WII)
       h = gethostbyaddr((char *)&ip,4,AF_INET);
       #else
       struct hostent htmp;
@@ -558,12 +559,12 @@ String _hx_std_host_reverse( int host )
       if( !h )
          return String();
       return String( h->h_name );
-   // #endif
+   #endif
 }
 
 String _hx_std_host_reverse_ipv6( Array<unsigned char> host )
 {
-   #if defined(HX_NX)
+   #if defined(HX_NX) || defined(HX_WII)
       return String();
    #else
       if (!host.mPtr || host->length!=16)
@@ -592,7 +593,7 @@ String _hx_std_host_reverse_ipv6( Array<unsigned char> host )
 **/
 String _hx_std_host_local()
 {
-   #if defined(HX_NX)
+   #if defined(HX_NX) || defined(HX_WII)
       return String();
    #else
       char buf[256];
@@ -638,7 +639,7 @@ void _hx_std_socket_connect( Dynamic o, int host, int port )
 **/
 void _hx_std_socket_connect_ipv6( Dynamic o, Array<unsigned char> host, int port )
 {
-   #if defined(HX_NX)
+   #if defined(HX_NX) || defined(HX_WII)
       return;
    #else
       struct sockaddr_in6 addr;
@@ -677,12 +678,12 @@ void _hx_std_socket_listen( Dynamic o, int n )
    hx::ExitGCFreeZone();
 }
 
-#if defined(HX_NX)
+#if defined(HX_NX) || defined(HX_WII)
 #ifndef FD_SETSIZE
 #define FD_SETSIZE 64
 #endif
 
-#if !defined(HX_NX)
+#if !defined(HX_NX) && !defined(HX_WII)
 typedef struct
 {
    unsigned int fds_bits[FD_SETSIZE / 32];
@@ -773,9 +774,9 @@ static struct timeval *init_timeval( double f, struct timeval *t ) {
 **/
 Array<Dynamic> _hx_std_socket_select( Array<Dynamic> rs, Array<Dynamic> ws, Array<Dynamic> es, Dynamic timeout )
 {
-   // #if defined(HX_NX)
+   #if defined(HX_WII)
       return null();
-   // #else
+   #else
       SOCKET n = 0;
       fd_set rx, wx, ex;
       fd_set *ra, *wa, *ea;
@@ -806,7 +807,7 @@ Array<Dynamic> _hx_std_socket_select( Array<Dynamic> rs, Array<Dynamic> ws, Arra
       r[1] = make_array_result(ws,wa);
       r[2] = make_array_result(es,ea);
       return r;
-   // #endif
+   #endif
 }
 
 /**
@@ -815,9 +816,9 @@ Array<Dynamic> _hx_std_socket_select( Array<Dynamic> rs, Array<Dynamic> ws, Arra
 **/
 void _hx_std_socket_fast_select( Array<Dynamic> rs, Array<Dynamic> ws, Array<Dynamic> es, Dynamic timeout )
 {
-   // #if defined(HX_NX)
+   #if defined(HX_WII)
       return;
-   // #else
+   #else
       SOCKET n = 0;
       fd_set rx, wx, ex;
       fd_set *ra, *wa, *ea;
@@ -852,7 +853,7 @@ void _hx_std_socket_fast_select( Array<Dynamic> rs, Array<Dynamic> ws, Array<Dyn
       make_array_result_inplace(rs, ra);
       make_array_result_inplace(ws, wa);
       make_array_result_inplace(es, ea);
-   // #endif
+    #endif
 }
 
 /**
@@ -889,7 +890,7 @@ void _hx_std_socket_bind( Dynamic o, int host, int port )
 **/
 void _hx_std_socket_bind_ipv6( Dynamic o, Array<unsigned char> host, int port )
 {
-   #if defined(HX_NX)
+   #if defined(HX_NX) || defined(HX_WII)
       return;
    #else
       SOCKET sock = val_sock(o);

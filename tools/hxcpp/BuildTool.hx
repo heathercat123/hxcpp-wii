@@ -1937,6 +1937,18 @@ class BuildTool
          Log.println("Using toolchain for Nintendo Switch");
       }
 
+      else if (defines.exists("wii"))
+      {
+         defines.set("toolchain", "linux");
+         defines.set("xcompile", "1");
+         defines.set("linux","linux");
+         defines.set("HXCPP_ARMV6", "1"); // That's a lie, but shush!
+         defines.set("HXCPP_NO_M32", "0");
+         defines.set("HXCPP_M32", "1");
+         defines.set("BINDIR","Wii");
+         Log.println("Using toolchain for Nintendo Wii");
+      }
+
       else if (defines.exists("android"))
       {
          defines.set("toolchain","android");

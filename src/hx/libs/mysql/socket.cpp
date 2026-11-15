@@ -44,12 +44,12 @@
 #	define SOCKET_ERROR (-1)
 #endif
 
-#ifdef HX_NX
+#if defined(HX_NX) || defined(HX_WII)
 #define __BSD_VISIBLE 1
 #define INADDR_NONE ((in_addr_t)0xffffffff)
 #endif
 
-#if (defined(NEKO_WINDOWS) || defined(HX_NX) || defined(NEKO_MAC)) && !defined(MSG_NOSIGNAL)
+#if (defined(NEKO_WINDOWS) || defined(HX_NX) || defined(NEKO_MAC) || defined(HX_WII)) && !defined(MSG_NOSIGNAL)
 #define MSG_NOSIGNAL 0
 #endif
 
@@ -142,7 +142,7 @@ PHOST phost_resolve( const char *host ) {
 		struct hostent hbase;
 		char buf[1024];
 		int errcode;
-		#if !defined(HX_NX)
+		#if !defined(HX_NX) && !defined(HX_WII)
 		gethostbyname_r(host,&hbase,buf,1024,&h,&errcode);
 		#endif
 #	endif

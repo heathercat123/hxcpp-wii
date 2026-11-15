@@ -11,8 +11,8 @@
 
   <compilerflag value="-I${SQLITE_DIR}"/>
 
-  <compilerflag value="-DSQLITE_OMIT_WAL" if="nx"/>
-  <compilerflag value="-DSQLITE_OMIT_LOAD_EXTENSION" if="nx"/>
+  <compilerflag value="-DSQLITE_OMIT_WAL" if="nx || wii"/>
+  <compilerflag value="-DSQLITE_OMIT_LOAD_EXTENSION" if="nx || wii"/>
 
   <file name="Sqlite.cpp"/>
 

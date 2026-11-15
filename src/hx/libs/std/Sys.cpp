@@ -21,7 +21,7 @@
 #ifndef EPPC
 #include <unistd.h>
 #include <dirent.h>
-#if defined(HX_NX)
+#if defined(HX_NX) || defined(HX_WII)
 #include <machine/termios.h>
 #else
 #include <termios.h>
@@ -32,9 +32,9 @@
 #include <limits.h>
 #ifndef ANDROID
 #include <locale.h>
-#if !defined(BLACKBERRY) && !defined(EPPC) && !defined(GCW0) && !defined(__GLIBC__) && !defined(HX_NX)
+#if !defined(BLACKBERRY) && !defined(EPPC) && !defined(GCW0) && !defined(__GLIBC__) && !defined(HX_NX) && !defined(HX_WII)
 #include <xlocale.h>
-#elif defined(HX_NX)
+#elif defined(HX_NX) || defined(HX_WII)
 #include <locale.h>
 #endif
 #endif
@@ -56,13 +56,19 @@
    #include <string>
 #endif
 
-#ifdef HX_ANDROID
+#if defined(HX_ANDROID)
    #include <sys/wait.h>
 #endif
 
 #ifdef HX_NX
 #include <sys/wait.h>
 #include <switch/arm/counter.h>
+#endif
+
+#ifdef HX_WII
+#include <sys/wait.h>
+#include <tuxedo/ppc/clock.h>
+#include <tuxedo/ppc/intrinsics.h>
 #endif
 
 #ifndef CLK_TCK
@@ -86,7 +92,7 @@
 
 String _hx_std_get_env( String v )
 {
-   #ifdef HX_WINRT || defined(HX_NX)
+   #if defined(HX_WINRT) || defined(HX_NX) || defined(HX_WII)
       return String();
    #else
       #if defined(NEKO_WINDOWS) && defined(HX_SMART_STRINGS)
@@ -105,7 +111,7 @@ String _hx_std_get_env( String v )
 **/
 void _hx_std_put_env( String e, String v )
 {
-#ifdef defined(HX_WINRT)
+#if defined(HX_WINRT)
    // Do nothing
 #elif defined(NEKO_WINDOWS)
    String set = e + HX_CSTRING("=") + (v != null()?v:"");
@@ -117,7 +123,7 @@ void _hx_std_put_env( String e, String v )
    #endif
       putenv(set.utf8_str());
 #else
-   #if !defined(HX_NX)
+   #if !defined(HX_NX) && !defined(HX_WII)
    if (v == null())
       unsetenv(e.utf8_str());
    else
@@ -203,11 +209,34 @@ String _hx_std_get_cwd()
    return HX_CSTRING("ms-appdata:///local/");
    #elif defined(EPPC)
    return String();
-   #elif defined(HX_NX)
+   #elif defined(HX_NX) || defined(HX_WII)
+
+   // TODO: USB
    if (_hx_std_sys_exists(HX_CSTRING("sdmc:/"))) {
       return HX_CSTRING("sdmc:/");
    }
-   return String(); // Idk, Atmosphere from SysMMC without a SD?
+   if (_hx_std_sys_exists(HX_CSTRING("sd:/"))) {
+       return HX_CSTRING("sd:/");
+   }
+
+   // WiiXplorer doesn't support the right USB port
+   // So IDK if the right one is usb0 and the left one usb1
+   // Or if the right one is usb2
+   if (_hx_std_sys_exists(HX_CSTRING("usb:/"))) {
+       return HX_CSTRING("usb:/");
+   }
+   if (_hx_std_sys_exists(HX_CSTRING("usb0:/"))) {
+       return HX_CSTRING("usb0:/");
+   }
+   if (_hx_std_sys_exists(HX_CSTRING("usb1:/"))) {
+       return HX_CSTRING("usb1:/");
+   }
+   if (_hx_std_sys_exists(HX_CSTRING("usb2:/"))) {
+       return HX_CSTRING("usb2:/");
+   }
+   // Idk, Atmosphere from SysMMC without a SD?
+   // On the Wii, this does mean that installing to the NAND does not work.
+   return String();
 #else
 #ifdef NEKO_WINDOWS
    wchar_t buf[261];
@@ -240,7 +269,7 @@ String _hx_std_get_cwd()
 **/
 bool _hx_std_set_cwd( String d )
 {
-   #if !defined(HX_WINRT) && !defined(EPPC) && !defined(HX_NX)
+   #if !defined(HX_WINRT) && !defined(EPPC) && !defined(HX_NX) && !defined(HX_WII)
 #ifdef NEKO_WINDOWS
    return SetCurrentDirectoryW(d.wchar_str()) == 0;
 #else
@@ -288,6 +317,10 @@ String _hx_std_sys_string()
    return HX_CSTRING("EPPC");
 #elif defined(HX_NX)
    return HX_CSTRING("HorizonOS");
+#elif defined(HX_WII)
+   // The RVL is not a port of the official name.
+   // It's there to avoid problems with Apple's iOS.
+   return HX_CSTRING("RVL-IOS");
 #else
 #error Unknow system string
 #endif
@@ -314,7 +347,7 @@ bool _hx_std_sys_is64()
 **/
 int _hx_std_sys_command( String cmd )
 {
-   #if defined(HX_WINRT) || defined(EMSCRIPTEN) || defined(EPPC) || defined(IPHONE) || defined(APPLETV) || defined(HX_APPLEWATCH) || defined(HX_NX)
+   #if defined(HX_WINRT) || defined(EMSCRIPTEN) || defined(EPPC) || defined(IPHONE) || defined(APPLETV) || defined(HX_APPLEWATCH) || defined(HX_NX) || defined(HX_WII)
    return -1;
    #else
    if( !cmd.raw_ptr() || !cmd.length )
@@ -660,7 +693,9 @@ double _hx_std_sys_cpu_time()
 #if defined(HX_WINRT) && !defined(_XBOX_ONE)
     return ((double)GetTickCount64()/1000.0);
 #elif defined(HX_NX)
-   return ((double)armTicksToNs(armGetSystemTick()) / 1.0e6); // Use directy the libnx API
+    return ((double)armTicksToNs(armGetSystemTick()) / 1.0e6); // Use directy the libnx API
+#elif defined(HX_NX)
+    return ((double)PPCTicksToNs(PPCGetTickCount()) / 1.0e6); // Use directy the libogc API
 #elif defined(NEKO_WINDOWS)
    FILETIME unused;
    FILETIME stime;
@@ -767,7 +802,7 @@ Array<String> _hx_std_sys_read_dir( String p )
 **/
 String _hx_std_file_full_path( String path )
 {
-#if defined(HX_WINRT) || defined(HX_NX)
+#if defined(HX_WINRT) || defined(HX_NX) || defined(HX_WII)
    return path;
 #elif defined(NEKO_WINDOWS)
    wchar_t buf[MAX_PATH+1];
@@ -807,7 +842,7 @@ String _hx_std_sys_exe_path()
    if( _NSGetExecutablePath(path, &path_len) )
       return null();
    return String::create(path);
-#elif defined(EPPC) || defined(HX_NX)
+#elif defined(EPPC) || defined(HX_NX) || defined(HX_WII)
    return HX_CSTRING("");
 #else
    {
@@ -885,7 +920,7 @@ Array<String> _hx_std_sys_env()
 **/
 int _hx_std_sys_getch( bool b )
 {
-#if defined(HX_WINRT) || defined(EMSCRIPTEN) || defined(EPPC) || defined(HX_NX)
+#if defined(HX_WINRT) || defined(EMSCRIPTEN) || defined(EPPC) || defined(HX_NX) || defined(HX_WII)
    return 0;
 #elif defined(NEKO_WINDOWS)
    hx::EnterGCFreeZone();
@@ -920,7 +955,7 @@ int _hx_std_sys_get_pid()
 {
 #   ifdef NEKO_WINDOWS
    return (int)(GetCurrentProcessId());
-#elif defined(EPPC) || defined(HX_NX)
+#elif defined(EPPC) || defined(HX_NX) || defined(HX_WII)
    return (1);
 #   else
    return (getpid());

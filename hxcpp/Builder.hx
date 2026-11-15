@@ -61,7 +61,7 @@ class Builder
 
             switch(target)
             {
-               case "ios", "android", "blackberry", "tizen", "emscripten", "webos", "windows", "msvc", "linux", "mac", "mingw", "tvos"`, "nx":
+               case "ios", "android", "blackberry", "tizen", "emscripten", "webos", "windows", "msvc", "linux", "mac", "mingw", "tvos"`, "nx", "wii":
                   defaultTarget = false;
                   if (linkStatic)
                   {
@@ -170,6 +170,10 @@ class Builder
                // Custom for Nintendo Switch (NX)
                case "nx":
                   validArchs.set("arm64", ["-Dnx", "-DHXCPP_ARM64", "-DHXCPP_M64"].concat(staticFlags));
+
+               // Custom for Nintendo Wii
+               case "wii":
+                  validArchs.set("powerpc", ["-Dwii", "-DHXCPP_ARMV6", "-DHXCPP_M32"].concat(staticFlags));
 
                case "android":
                   if( archs.length == 0 )
